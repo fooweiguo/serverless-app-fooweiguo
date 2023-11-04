@@ -1,39 +1,41 @@
-name: Terraform Serverless
+name: Deploy master branch
 
 on:
   push:
     branches:
-      - main
-
+      - master
 
 jobs:
-  terraform-ci:
-   runs-on: ubuntu-latest
-
-   steps:
-##setup
-   - name: Checkout repository
-     uses: actions/checkout@v2
-
-
-   - name: Set up Terraform
-     uses: hashicorp/setup-terraform@v1
-
-
-   - name: Configure AWS credentials
-     uses: aws-actions/configure-aws-credentials@v1
-     with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1 # or hardcode us-east-1
-## Serverless commands
-   - name: Serverless deploy
-     run: serverless deploy
-
-## Sleep 180s to verify
-    - name: Sleep
-     run: sleep 180
-
-## Serverless remove 
-    - name: Serverless destroy
-     run: serverless remove
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm ci
+    - name: serverless deploy
+      uses: serverless/github-action@v3.2
+      with:
+        args: deploy
+      env:
+        #SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+        # or if using AWS credentials directly
+         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Sleep for 180s
+      run: sleep 180
+    - name: serverless remove
+      uses: serverless/github-action@v3.2
+      with:
+        args: remove
+      env:
+        #SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+        # or if using AWS credentials directly
+         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
